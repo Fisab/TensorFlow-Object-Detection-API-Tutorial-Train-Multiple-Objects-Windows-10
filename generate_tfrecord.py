@@ -32,31 +32,13 @@ flags.DEFINE_string('output_path', '', 'Path to output TFRecord')
 FLAGS = flags.FLAGS
 
 
-# TO-DO replace this with label map
-def class_text_to_int(row_label):
-    if row_label == 'nine':
-        return 1
-    elif row_label == 'ten':
-        return 2
-    elif row_label == 'jack':
-        return 3
-    elif row_label == 'queen':
-        return 4
-    elif row_label == 'king':
-        return 5
-    elif row_label == 'ace':
-        return 6
-    else:
-        None
-
-
 def split(df, group):
     data = namedtuple('data', ['filename', 'object'])
     gb = df.groupby(group)
     return [data(filename, gb.get_group(x)) for filename, x in zip(gb.groups.keys(), gb.groups)]
 
 
-def create_tf_example(group, path):
+def create_tf_example(group, path, classes_map):
     with tf.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
         encoded_jpg = fid.read()
     encoded_jpg_io = io.BytesIO(encoded_jpg)
@@ -77,8 +59,9 @@ def create_tf_example(group, path):
         xmaxs.append(row['xmax'] / width)
         ymins.append(row['ymin'] / height)
         ymaxs.append(row['ymax'] / height)
-        classes_text.append(row['class'].encode('utf8'))
-        classes.append(class_text_to_int(row['class']))
+        
+        classes_text.append(classes_map[row['class']].encode('utf8'))
+        classes.append(row['class'])
 
     tf_example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': dataset_util.int64_feature(height),
